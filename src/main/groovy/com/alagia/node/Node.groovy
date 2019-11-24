@@ -56,25 +56,4 @@ class NodeId {
     String name
     String address
     int port
-
-    boolean equals(o) {
-        if (this.is(o)) return true
-        if (getClass() != o.class) return false
-
-        NodeId nodeId = (NodeId) o
-
-        if (port != nodeId.port) return false
-        if (address != nodeId.address) return false
-        if (name != nodeId.name) return false
-
-        return true
-    }
-
-    int hashCode() {
-        int result
-        result = (name != null ? name.hashCode() : 0)
-        result = 31 * result + (address != null ? address.hashCode() : 0)
-        result = 31 * result + port
-        return result
-    }
 }

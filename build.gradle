@@ -15,6 +15,7 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	compile group: 'com.google.guava', name: 'guava', version: '28.0-jre'
 
 	implementation 'org.codehaus.groovy:groovy'
