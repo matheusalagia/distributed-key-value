@@ -2,6 +2,7 @@ package com.alagia.node
 
 import com.alagia.node.messaging.MessageReceiver
 import com.alagia.node.messaging.MessageSender
+import groovy.transform.CompileStatic
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -15,6 +16,7 @@ import org.springframework.data.redis.listener.adapter.MessageListenerAdapter
 import org.springframework.web.client.RestTemplate
 
 @SpringBootApplication
+@CompileStatic
 class NodeApplication {
 
     static void main(String[] args) {
@@ -34,7 +36,7 @@ class NodeApplication {
                     ArrayList<NodeId> nodes) {
         def nodeId = new NodeId(name: name, address: address, port: port)
         nodes.add(nodeId)
-        ArrayList sort = nodes.sort { it.hashCode() }
+        List<NodeId> sort = nodes.sort { it.hashCode() }
         return new Cluster(sort)
     }
 
@@ -42,35 +44,36 @@ class NodeApplication {
     Node node(@Value('${name}') String name,
               @Value('${address}') String address,
               @Value('${port}') int port,
-              Cluster cluster) {
+              Cluster cluster,
+              MessageSender messageSender) {
         def nodeId = new NodeId(name: name, address: address, port: port)
-        return new Node(nodeId, cluster)
+        return new Node(nodeId, cluster, messageSender)
     }
 
-    @Bean
-    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory,
-                                            MessageListenerAdapter listenerAdapter) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer()
-        container.setConnectionFactory(connectionFactory)
-        container.addMessageListener(listenerAdapter, new PatternTopic("cluster-commands"))
+//    @Bean
+//    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory,
+//                                            MessageListenerAdapter listenerAdapter) {
+//        RedisMessageListenerContainer container = new RedisMessageListenerContainer()
+//        container.setConnectionFactory(connectionFactory)
+//        container.addMessageListener(listenerAdapter, new PatternTopic("cluster-commands"))
+//
+//        return container
+//    }
+//
+//    @Bean
+//    MessageListenerAdapter listenerAdapter(MessageReceiver receiver) {
+//        return new MessageListenerAdapter(receiver, "receiveMessage")
+//    }
+//
+//    @Bean
+//    MessageReceiver receiver() {
+//        return new MessageReceiver()
+//    }
 
-        return container
-    }
-
-    @Bean
-    MessageListenerAdapter listenerAdapter(MessageReceiver receiver) {
-        return new MessageListenerAdapter(receiver, "receiveMessage")
-    }
-
-    @Bean
-    MessageReceiver receiver() {
-        return new MessageReceiver()
-    }
-
-    @Bean
-    StringRedisTemplate template(RedisConnectionFactory connectionFactory) {
-        return new StringRedisTemplate(connectionFactory)
-    }
+//    @Bean
+//    StringRedisTemplate template(RedisConnectionFactory connectionFactory) {
+//        return new StringRedisTemplate(connectionFactory)
+//    }
 
     @Bean
     MessageSender messageSender() {

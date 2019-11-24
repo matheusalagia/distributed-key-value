@@ -1,5 +1,6 @@
 package com.alagia.node
 
+import com.alagia.node.messaging.MessageSender
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -13,10 +14,14 @@ class Node {
     private NodeId id
     private Map<String, Data> data = [:]
     private Cluster cluster
+    private MessageSender messageSender
 
-    Node(NodeId id, Cluster cluster) {
+    Node(NodeId id,
+         Cluster cluster,
+         MessageSender messageSender) {
         this.id = id
         this.cluster = cluster
+        this.messageSender = messageSender
     }
 
     void save(Data data) {
@@ -28,7 +33,7 @@ class Node {
             this.data[data.key] = data
         } else {
             log.info("Sending $data (partition $dataPartition) to correct node $node")
-            // fazer chamada rest para o nodo correto
+            messageSender.saveData(node, data)
         }
     }
 
@@ -36,18 +41,17 @@ class Node {
         int dataPartition = calculatePartition(key)
         def node = cluster.partitionOwner(dataPartition)
 
-        if (node) {
+        if (node == id) {
             log.info("Getting data for key $key (partition $dataPartition) on node $id")
             return Optional.ofNullable(data[key])
         }
         log.info("Getting data for key $key (partition $dataPartition) on another node ($id)")
-        // fazer chamada
-        return null // fazer chamada para nodo correto
+        return messageSender.getData(node, key)
     }
 
 
     private static int calculatePartition(Object obj) {
-        Math.abs(obj.hashCode()) % 360
+        Math.abs(obj.hashCode()) % Cluster.NUNBER_OF_PARTITIONS
     }
 }
 

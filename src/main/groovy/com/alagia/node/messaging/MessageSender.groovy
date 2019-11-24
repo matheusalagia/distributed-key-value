@@ -3,6 +3,8 @@ package com.alagia.node.messaging
 import com.alagia.node.Data
 import com.alagia.node.NodeId
 import groovy.util.logging.Slf4j
+import org.springframework.http.HttpStatus
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestTemplate
 
 @Slf4j
@@ -22,17 +24,24 @@ class MessageSender {
     void saveData(NodeId nodeId, Data data) {
         try {
             String url = buildUrl(nodeId)
-            restTemplate.postForLocation(url, data)
+            restTemplate.postForLocation("$url/${data.key}", data.value)
         } catch(Exception e) {
             log.error("Error saving Data $data to node $nodeId")
-            throw new RuntimeException("Error saving remote data $data to node $nodeId and key <$key>.", e)
+            throw new RuntimeException("Error saving remote data $data to node $nodeId.", e)
         }
     }
 
-    Data getData(NodeId nodeId, String key) {
+    Optional<Data> getData(NodeId nodeId, String key) {
         try {
             String url = buildUrl(nodeId)
-            return restTemplate.getForEntity("$url/$key", Data).getBody() as Data
+            def data = restTemplate.getForEntity("$url/$key", Data).getBody() as Data
+            log.info("Data received $data")
+            return Optional.of(data)
+        } catch(HttpClientErrorException e) {
+            if(e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                return Optional.empty()
+            }
+            throw new RuntimeException("Error getting remote data from node $nodeId and key <$key>.", e)
         } catch(Exception e) {
             log.error("Error getting Data from node $nodeId")
             throw new RuntimeException("Error getting remote data from node $nodeId and key <$key>.", e)
