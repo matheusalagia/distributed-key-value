@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.RestController
 @Slf4j
 class RestApi {
 
-    private Node node
+    private LocalNode node
 
     @Autowired
-    RestApi(Node node) {
+    RestApi(LocalNode node) {
         this.node = node
     }
 
@@ -33,5 +33,13 @@ class RestApi {
         log.info("Received find by key request $key")
         def result = node.get(key)
         return ResponseEntity.of(result)
+    }
+
+    @PostMapping(path = 'replica/{key}')
+    def saveReplica(@PathVariable String key,
+             @RequestBody String value) {
+        def data = new Data(key: key, value: value)
+        log.info("Received replica save request: $data")
+        node.saveLocalReplica(data)
     }
 }

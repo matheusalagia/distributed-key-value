@@ -1,18 +1,11 @@
 package com.alagia.node
 
-import com.alagia.node.messaging.MessageReceiver
-import com.alagia.node.messaging.MessageSender
 import groovy.transform.CompileStatic
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Bean
-import org.springframework.data.redis.connection.RedisConnectionFactory
-import org.springframework.data.redis.core.StringRedisTemplate
-import org.springframework.data.redis.listener.PatternTopic
-import org.springframework.data.redis.listener.RedisMessageListenerContainer
-import org.springframework.data.redis.listener.adapter.MessageListenerAdapter
 import org.springframework.web.client.RestTemplate
 
 @SpringBootApplication
@@ -33,51 +26,24 @@ class NodeApplication {
     Cluster cluster(@Value('${name}') String name,
                     @Value('${address}') String address,
                     @Value('${port}') int port,
-                    ArrayList<NodeId> nodes) {
+                    ArrayList<NodeId> nodes
+    ) {
         def nodeId = new NodeId(name: name, address: address, port: port)
         nodes.add(nodeId)
-        List<NodeId> sort = nodes.sort { it.hashCode() }
+        def restTemplate = new RestTemplate()
+        List<RemoteNode> sort = nodes
+                .collect { new RemoteNode(it, restTemplate) }
+                .sort { it.id.hashCode() }
         return new Cluster(sort)
     }
 
     @Bean
-    Node node(@Value('${name}') String name,
-              @Value('${address}') String address,
-              @Value('${port}') int port,
-              Cluster cluster,
-              MessageSender messageSender) {
+    LocalNode node(@Value('${name}') String name,
+                   @Value('${address}') String address,
+                   @Value('${port}') int port,
+                   Cluster cluster) {
         def nodeId = new NodeId(name: name, address: address, port: port)
-        return new Node(nodeId, cluster, messageSender)
-    }
-
-//    @Bean
-//    RedisMessageListenerContainer container(RedisConnectionFactory connectionFactory,
-//                                            MessageListenerAdapter listenerAdapter) {
-//        RedisMessageListenerContainer container = new RedisMessageListenerContainer()
-//        container.setConnectionFactory(connectionFactory)
-//        container.addMessageListener(listenerAdapter, new PatternTopic("cluster-commands"))
-//
-//        return container
-//    }
-//
-//    @Bean
-//    MessageListenerAdapter listenerAdapter(MessageReceiver receiver) {
-//        return new MessageListenerAdapter(receiver, "receiveMessage")
-//    }
-//
-//    @Bean
-//    MessageReceiver receiver() {
-//        return new MessageReceiver()
-//    }
-
-//    @Bean
-//    StringRedisTemplate template(RedisConnectionFactory connectionFactory) {
-//        return new StringRedisTemplate(connectionFactory)
-//    }
-
-    @Bean
-    MessageSender messageSender() {
-        return new MessageSender(new RestTemplate())
+        return new LocalNode(nodeId, cluster)
     }
 
 }
