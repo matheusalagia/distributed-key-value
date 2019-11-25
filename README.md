@@ -8,6 +8,8 @@
 
 [] V2
   [] Replication
+    [X] Dados replicados
+    [] Retornar dados quando leader cair.
   [] Dynamic Cluster
 
 [] V3
