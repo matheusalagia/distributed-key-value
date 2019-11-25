@@ -29,25 +29,25 @@ class LocalNode implements Node {
         def node = cluster.partitionLeader(partition)
 
         if (node.id == id) {
-            log.info("Saving $data (partition $partition) on node $id")
+            log.info("Saving $data (partition $partition) on local storage $id")
             this.data[data.key] = data
             replicate(partition, data)
         } else {
-            log.info("Sending $data (partition $partition) to correct node ${node.id}")
+            log.info("Sending $data (partition $partition) to partition leader ${node.id}")
             node.save(data)
         }
     }
 
     @Override
     Optional<Data> get(String key) {
-        int dataPartition = calculatePartition(key)
-        def node = cluster.partitionLeader(dataPartition)
+        int partition = calculatePartition(key)
+        def node = cluster.partitionLeader(partition)
 
         if (node.id == id) {
-            log.info("Getting data for key $key (partition $dataPartition) on node $id")
+            log.info("Getting data for key $key (partition $partition) on local storage $id")
             return Optional.ofNullable(data[key])
         }
-        log.info("Getting data for key $key (partition $dataPartition) on another node ($id)")
+        log.info("Getting data for key $key (partition $partition) on partition leader ($id)")
         return node.get(key)
     }
 
