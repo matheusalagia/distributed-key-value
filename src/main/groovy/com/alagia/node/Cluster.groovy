@@ -1,9 +1,11 @@
 package com.alagia.node
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Iterables
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import org.springframework.data.redis.core.StringRedisTemplate
 
 @CompileStatic
 @Slf4j
@@ -13,10 +15,12 @@ class Cluster {
     public static final int NUMBER_OF_REPLICAS = 2
 
     List<RemoteNode> nodes
+    StringRedisTemplate redisTemplate
     List<Partition> partitions
 
-    Cluster(List<RemoteNode> nodes) {
+    Cluster(List<RemoteNode> nodes, StringRedisTemplate redisTemplate) {
         this.nodes = nodes
+        this.redisTemplate = redisTemplate
         distributePartitions()
     }
 
@@ -34,10 +38,23 @@ class Cluster {
 
         log.info("Distributed partitions: $partitions")
     }
+
+    void saveReplicationInfo(ReplicationDefinitionEvent replicationDefinition) {
+        def replicaNodes = nodes.findAll {it.id in replicationDefinition.replicas}
+
+        partitions
+                .find {it.id == replicationDefinition.partition}
+                .replicas = replicaNodes
+    }
+
+    void broadcastReplicationDefinition(ReplicationDefinitionEvent replicationDefinitionEvent) {
+        redisTemplate.convertAndSend('cluster-events', new ObjectMapper().writeValueAsString(replicationDefinitionEvent))
+    }
 }
 
 @Canonical
 class Partition {
     int id
     RemoteNode leader
+    List<RemoteNode> replicas
 }

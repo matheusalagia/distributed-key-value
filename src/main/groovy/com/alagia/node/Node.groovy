@@ -3,19 +3,13 @@ package com.alagia.node
 import groovy.transform.Canonical
 import groovy.transform.ToString
 
-trait Node {
+interface Node {
 
-    NodeId id
+    void save(Data data)
 
-    abstract void save(Data data)
+    Optional<Data> get(String key)
 
-    abstract Optional<Data> get(String key)
-
-    abstract void saveLocalReplica(Data data)
-
-    static int calculatePartition(String key) {
-        Math.abs(key.hashCode()) % Cluster.NUNBER_OF_PARTITIONS
-    }
+    void saveLocalReplica(Data data)
 }
 
 @Canonical

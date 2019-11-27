@@ -12,6 +12,7 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class LocalNode implements Node {
 
+    private NodeId id
     private Cluster cluster
     private Map<String, Data> data = [:]
     private Multimap<Integer, Node> replicaMap = ArrayListMultimap.create()
@@ -56,6 +57,11 @@ class LocalNode implements Node {
         this.data[data.key] = data
     }
 
+
+    private static int calculatePartition(String key) {
+        Math.abs(key.hashCode()) % Cluster.NUNBER_OF_PARTITIONS
+    }
+
     private void replicate(int partition, Data data) {
         log.info("Replicating $data")
         replicaMap
@@ -70,7 +76,10 @@ class LocalNode implements Node {
 
         nodePartitions.each {
             Collections.shuffle(otherNodes)
-            replicaMap.putAll(it.id, otherNodes.take(Cluster.NUMBER_OF_REPLICAS))
+            def replicaNodes = otherNodes.take(Cluster.NUMBER_OF_REPLICAS)
+            replicaMap.putAll(it.id, replicaNodes)
+            def leaderReplicationDefinition = new ReplicationDefinitionEvent(it.id, id, replicaNodes.id)
+            cluster.broadcastReplicationDefinition(leaderReplicationDefinition)
         }
 
         log.info("Replication map: ${replicaMap}")

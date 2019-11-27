@@ -19,6 +19,7 @@ dependencies {
 	compile group: 'com.google.guava', name: 'guava', version: '28.0-jre'
 
 	implementation 'org.codehaus.groovy:groovy'
+	implementation 'org.codehaus.groovy:groovy-json'
 	compile 'commons-codec:commons-codec:1.13'
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {
 		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'

@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate
 @CompileStatic
 class RemoteNode implements Node {
 
+    NodeId id
     private String baseUrl
     private RestTemplate restTemplate
 
