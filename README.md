@@ -6,7 +6,7 @@ O objetivo deste projeto é implementar "Distributed Patterns" conforme apresent
 ### Como compilar e rodar
 Esse é uma aplicação feita em groovy com Spring Boot.
 
-####Pre-requisitos:
+#### Pre-requisitos:
   - JDK 8 (ou maior) instalada.
   - Docker
   
@@ -27,27 +27,26 @@ Esse é uma aplicação feita em groovy com Spring Boot.
 ### Como usar
 Tanto a leitura quando a escrita podem ser feitas através de qualquer um dos nodos.
 
-####Escrevendo dados:
+#### Escrevendo dados:
  - curl -v -d 'Value' -H "Content-Type: application/json" -X POST http://localhost:8080/db/{key}
  - curl -v -d 'dado teste 001' -H "Content-Type: application/json" -X POST http://localhost:8080/db/key001
 
-####Lendo dados:
+#### Lendo dados:
  - curl -v -X GET http://localhost:9090/db/{key}   
 
 ### TODO
-[X] V1 DONE
-  [X] Partitioned Distributed Hash DONE
-  [X] Save and Get Operations DONE
-  [X] Static Cluster DONE
+#### V1
+  - Partitioned Distributed Hash DONE
+  - Save and Get Operations DONE
+  - Static Cluster DONE
 
-[] V2
-  [] Replication
-    [X] Dados replicados DONE
-    [X] Master node distribuindo partições DONE
-    [] Retornar dados quando leader cair. DOING
-  [] Dynamic Cluster
+#### V2
+  - Dados replicados DONE
+  - Master node distribuindo partições DONE
+  - Retornar dados quando leader cair. DOING
+  - Dynamic Cluster
 
-[] V3
-  [] Vector clocks
-  [] Read Repair
+#### V3
+  - Vector clocks
+  - Read Repair
 
