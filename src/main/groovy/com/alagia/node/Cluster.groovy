@@ -2,8 +2,10 @@ package com.alagia.node
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import org.springframework.data.redis.core.StringRedisTemplate
 
@@ -14,23 +16,30 @@ class Cluster {
     public static final int NUNBER_OF_PARTITIONS = 32
     public static final int NUMBER_OF_REPLICAS = 2
 
-    List<RemoteNode> nodes
+    List<RemoteNode> nodes = Lists.newCopyOnWriteArrayList()
     StringRedisTemplate redisTemplate
-    List<Partition> partitions
+    List<Partition> partitions = new ArrayList<>(NUNBER_OF_PARTITIONS)
+    ObjectMapper objectMapper
 
-    Cluster(List<RemoteNode> nodes, StringRedisTemplate redisTemplate) {
+    Cluster(List<RemoteNode> nodes,
+            StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper) {
         this.nodes = nodes
         this.redisTemplate = redisTemplate
-        distributePartitions()
+        this.objectMapper = objectMapper
     }
 
     RemoteNode partitionLeader(int partition) {
-        return partitions.find {it.id == partition}?.leader
+        def leaderId = partitions.find { it.id == partition }?.leader
+        return nodes.find {it.id == leaderId}
+    }
+
+    List<Partition> getPartitiosOf(NodeId node) {
+        return partitions.findAll {it.leader == node}
     }
 
     void distributePartitions() {
-        def nodesIterator = Iterables.cycle(nodes).iterator()
-        partitions = new ArrayList<>(NUNBER_OF_PARTITIONS)
+        def nodesIterator = Iterables.cycle(nodes.id).iterator()
         NUNBER_OF_PARTITIONS.times {
             def partition = new Partition(id: it, leader: nodesIterator.next())
             partitions.add(partition)
@@ -39,22 +48,27 @@ class Cluster {
         log.info("Distributed partitions: $partitions")
     }
 
-    void saveReplicationInfo(ReplicationDefinitionEvent replicationDefinition) {
-        def replicaNodes = nodes.findAll {it.id in replicationDefinition.replicas}
-
-        partitions
-                .find {it.id == replicationDefinition.partition}
-                .replicas = replicaNodes
+    void broadcastPartitionigEvent(PartitioningUpdateEvent replicationDefinitionEvent) {
+        def event = objectMapper.writeValueAsString(replicationDefinitionEvent)
+        redisTemplate.convertAndSend('cluster-events', event)
     }
 
-    void broadcastReplicationDefinition(ReplicationDefinitionEvent replicationDefinitionEvent) {
-        redisTemplate.convertAndSend('cluster-events', new ObjectMapper().writeValueAsString(replicationDefinitionEvent))
+    void broadcastNodeDown(NodeId nodeId) {
+        def event = objectMapper.writeValueAsString(new NodeDownEvent(nodeId: nodeId))
+        redisTemplate.convertAndSend('cluster-events', event)
+    }
+
+    void redefinePartition(Partition partition) {
+        log.info("Redefining partition $partition on $partitions")
+        partitions.removeAll {it.id == partition.id}
+        partitions.add(partition)
     }
 }
 
 @Canonical
+@ToString(includePackage = false, includeFields = true)
 class Partition {
     int id
-    RemoteNode leader
-    List<RemoteNode> replicas
+    NodeId leader
+    List<NodeId> replicas
 }

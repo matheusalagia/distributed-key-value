@@ -5,11 +5,17 @@ import groovy.transform.ToString
 
 interface Node {
 
+    NodeId getId()
+
     void save(Data data)
 
     Optional<Data> get(String key)
 
     void saveLocalReplica(Data data)
+}
+
+interface RemoteNode extends Node {
+    boolean isHealthy()
 }
 
 @Canonical
@@ -18,6 +24,7 @@ class NodeId {
     String name
     String address
     int port
+    boolean leader
 
     boolean equals(o) {
         if (this.is(o)) return true

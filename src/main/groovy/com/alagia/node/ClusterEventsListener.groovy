@@ -1,6 +1,9 @@
 package com.alagia.node
 
 
+import static com.alagia.node.ClusterEventTypes.PARTITION_NEW_LEADER
+import static com.alagia.node.ClusterEventTypes.PARTITION_REPLICA_UPDATE
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
@@ -10,12 +13,12 @@ import groovy.util.logging.Slf4j
 class ClusterEventsListener {
 
     private ObjectMapper objectMapper
-    private Cluster cluster
+    private LocalNode localNode
 
     ClusterEventsListener(ObjectMapper objectMapper,
-                          Cluster cluster) {
+                          LocalNode localNode) {
         this.objectMapper = objectMapper
-        this.cluster = cluster
+        this.localNode = localNode
     }
 
     void listen(String event) {
@@ -23,31 +26,47 @@ class ClusterEventsListener {
 
         def slurper = new JsonSlurper()
         def evt = slurper.parseText(event)
-        if(evt.type == 'partition-replication') {
-            ReplicationDefinitionEvent replicationDefinition  = objectMapper.readValue(event, ReplicationDefinitionEvent)
-            cluster.saveReplicationInfo(replicationDefinition)
+
+        if(evt.type == PARTITION_NEW_LEADER || evt.type == PARTITION_REPLICA_UPDATE) {
+            PartitioningUpdateEvent partitioningUpdateEvent  = objectMapper.readValue(event, PartitioningUpdateEvent)
+
+            if(evt.type == PARTITION_NEW_LEADER) {
+                localNode.newLeader(partitioningUpdateEvent.partition)
+            } else {
+                localNode.updateReplicas(partitioningUpdateEvent.partition)
+            }
+        }
+
+        if(evt.type == ClusterEventTypes.NODE_DOWN) {
+            NodeDownEvent nodeDownEvent  = objectMapper.readValue(event, NodeDownEvent)
+            localNode.setNodeAsDown(nodeDownEvent.nodeId)
         }
     }
 }
 
 @Canonical
-class ReplicationDefinitionEvent {
-    String id
+class PartitioningUpdateEvent {
     String type
-    Integer partition
-    NodeId leader
-    List<NodeId> replicas
+    Partition partition
 
-    ReplicationDefinitionEvent() {
+    PartitioningUpdateEvent() {
     }
 
-    ReplicationDefinitionEvent(Integer partition,
-                               NodeId leader,
-                               List<NodeId> replicas) {
-        this.id = UUID.randomUUID().toString()
-        this.type = 'partition-replication'
+    PartitioningUpdateEvent(String type, Partition partition) {
+        this.type = type
         this.partition = partition
-        this.leader = leader
-        this.replicas = replicas
     }
+}
+
+@Canonical
+class ClusterEventTypes {
+    static final String PARTITION_REPLICA_UPDATE = 'replication-update'
+    static final String PARTITION_NEW_LEADER = 'partitioning-new-leader'
+    static final String NODE_DOWN = 'node_down'
+}
+
+@Canonical
+class NodeDownEvent {
+    String type = ClusterEventTypes.NODE_DOWN
+    NodeId nodeId
 }

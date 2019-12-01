@@ -20,7 +20,7 @@ class RestApi {
         this.node = node
     }
 
-    @PostMapping(path = '{key}')
+    @PostMapping(path = 'db/{key}')
     def save(@PathVariable String key,
              @RequestBody String value) {
         def data = new Data(key: key, value: value)
@@ -28,7 +28,7 @@ class RestApi {
         node.save(data)
     }
 
-    @GetMapping(path = '{key}')
+    @GetMapping(path = 'db/{key}')
     ResponseEntity<Data> findKey(@PathVariable String key) {
         log.info("Received find by key request $key")
         def result = node.get(key)
@@ -41,5 +41,15 @@ class RestApi {
         def data = new Data(key: key, value: value)
         log.info("Received replica save request: $data")
         node.saveLocalReplica(data)
+    }
+
+    @GetMapping(path = 'health')
+    ResponseEntity health() {
+        return ResponseEntity.ok().build()
+    }
+
+    @GetMapping(path = 'internal/cluster_state')
+    ResponseEntity clusterState() {
+        return ResponseEntity.ok(node.clusterState())
     }
 }

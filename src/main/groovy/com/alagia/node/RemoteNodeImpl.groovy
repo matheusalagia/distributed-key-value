@@ -8,21 +8,27 @@ import org.springframework.web.client.RestTemplate
 
 @Slf4j
 @CompileStatic
-class RemoteNode implements Node {
+class RemoteNodeImpl implements RemoteNode {
 
     NodeId id
     private String baseUrl
     private RestTemplate restTemplate
 
-    RemoteNode(NodeId id, RestTemplate restTemplate) {
+    RemoteNodeImpl(NodeId id, RestTemplate restTemplate) {
         this.id = id
         this.baseUrl = "http://${id.address}:${id.port}"
         this.restTemplate = restTemplate
     }
 
+    @Override
+    NodeId getId() {
+        return id
+    }
+
+    @Override
     void save(Data data) {
         try {
-            String url = "$baseUrl/${data.key}"
+            String url = "$baseUrl/db/${data.key}"
             restTemplate.postForLocation(url, data.value)
         } catch(Exception e) {
             log.error("Error saving Data $data to node $id")
@@ -30,9 +36,10 @@ class RemoteNode implements Node {
         }
     }
 
+    @Override
     Optional<Data> get(String key) {
         try {
-            String url = "$baseUrl/$key"
+            String url = "$baseUrl/db/$key"
             def data = restTemplate.getForEntity(url, Data).getBody() as Data
             log.info("Data received $data")
             return Optional.of(data)
@@ -58,6 +65,17 @@ class RemoteNode implements Node {
         }
     }
 
+    @Override
+    boolean isHealthy() {
+        try {
+            String url = "$baseUrl/health"
+            def response = restTemplate.getForEntity(url, String)
+            return response.statusCode.'2xxSuccessful'
+        } catch(Exception e) {
+            log.error("Error on health check node ${id}")
+            return false
+        }
+    }
 
     @Override
     String toString() {
